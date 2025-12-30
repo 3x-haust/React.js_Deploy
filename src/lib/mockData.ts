@@ -10,6 +10,22 @@ export interface Repository {
   updatedAt: string;
 }
 
+export interface User {
+  id: number;
+  githubId: string;
+  username: string;
+  avatarUrl?: string;
+}
+
+export interface ProjectMember {
+  id: number;
+  projectId: number;
+  userId: number;
+  role: 'OWNER' | 'MEMBER';
+  user: User;
+  createdAt: string;
+}
+
 export interface Deployment {
   id: number;
   projectId: string;
@@ -34,6 +50,7 @@ export interface Project {
   useRedis?: boolean;
   useElasticsearch?: boolean;
   lastDeployment?: Deployment;
+  members?: ProjectMember[];
   createdAt: string;
 }
 

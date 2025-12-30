@@ -46,6 +46,16 @@ export const api = {
         method: 'DELETE',
       }),
     getSettings: (id: number) => fetchWithAuth(`/projects/${id}/settings`),
+    getMembers: (id: number) => fetchWithAuth(`/projects/${id}/members`),
+    inviteMember: (id: number, username: string) =>
+      fetchWithAuth(`/projects/${id}/members`, {
+        method: 'POST',
+        body: JSON.stringify({ username }),
+      }),
+    removeMember: (id: number, userId: number) =>
+      fetchWithAuth(`/projects/${id}/members/${userId}`, {
+        method: 'DELETE',
+      }),
   },
   repositories: {
     getAll: () => fetchWithAuth('/github/repositories'),
