@@ -208,10 +208,28 @@ export const Settings = () => {
       });
 
       if (Object.keys(newVars).length > 0) {
-        setEnvVars(prev => ({ ...prev, ...newVars }));
-        toast({
-          title: 'Import Successful',
-          description: `Loaded ${Object.keys(newVars).length} environment variables. Re-save to apply changes.`,
+        const mergedVars = { ...envVars, ...newVars };
+        setEnvVars(mergedVars);
+        
+        api.projects.updateSettings(Number(projectId), {
+          installCommand,
+          outputDir,
+          port: Number(port),
+          dbType,
+          useRedis,
+          useElasticsearch,
+          envVariables: mergedVars,
+        }).then(() => {
+          toast({
+            title: 'Import & Save Successful',
+            description: `Loaded and saved ${Object.keys(newVars).length} environment variables.`,
+          });
+        }).catch(() => {
+          toast({
+            title: 'Error',
+            description: 'Failed to auto-save imported variables.',
+            variant: 'destructive',
+          });
         });
       }
     };
