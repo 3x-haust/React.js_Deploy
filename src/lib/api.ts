@@ -75,5 +75,13 @@ export const api = {
         method: 'POST',
       }),
   },
+  admin: {
+    getUsers: () => fetchWithAuth('/admin/users'),
+    updateUser: (id: number, data: { allowed?: boolean; role?: string }) =>
+      fetchWithAuth(`/admin/users/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+  },
 };
 

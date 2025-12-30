@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { api } from '@/lib/api';
 
 interface User {
   id: number;
@@ -12,31 +13,44 @@ interface User {
 export default function AdminUsers() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/admin/users')
-      .then((res) => res.json())
+    api.admin.getUsers()
       .then((data) => {
         setUsers(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('Failed to fetch users', err);
+        setError(err.message);
         setLoading(false);
       });
   }, []);
 
   const updateUser = (id: number, allowed: boolean, role: 'admin' | 'user') => {
-    fetch(`/api/admin/users/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ allowed, role }),
-    })
-      .then((res) => res.json())
+    api.admin.updateUser(id, { allowed, role })
       .then((updated) => {
         setUsers((prev) =>
           prev.map((u) => (u.id === id ? { ...u, allowed: updated.allowed, role: updated.role } : u))
         );
+      })
+      .catch((err) => {
+        console.error('Failed to update user', err);
       });
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-pulse text-muted-foreground">Loading users...</div>
+    </div>
+  );
+
+  if (error) return (
+    <div className="p-8 text-center text-destructive">
+      Error: {error}
+    </div>
+  );
 
   return (
     <div className="p-8 max-w-2xl mx-auto">
