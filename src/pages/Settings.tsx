@@ -400,7 +400,7 @@ export const Settings = () => {
                 <input
                   id="env-upload-settings"
                   type="file"
-                  accept="*"
+                  accept=".env,.properties,*"
                   className="hidden"
                   onChange={handleEnvFileChange}
                 />

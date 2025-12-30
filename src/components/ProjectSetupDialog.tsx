@@ -402,7 +402,7 @@ export const ProjectSetupDialog = ({
                 <input
                   id="env-upload"
                   type="file"
-                  accept="*"
+                  accept=".env,.properties,*"
                   className="hidden"
                   onChange={handleEnvFileChange}
                 />
