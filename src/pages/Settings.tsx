@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Eye, EyeOff, Save, Upload } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Eye, EyeOff, Save, Upload, Pencil, Check, X } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,6 +41,8 @@ export const Settings = () => {
     value: '',
     target: 'all',
   });
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState<string>('');
   const { toast } = useToast();
 
   const [outputDir, setOutputDir] = useState('dist');
@@ -99,6 +101,41 @@ export const Settings = () => {
       toast({
         title: 'Error',
         description: 'Failed to add environment variable.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleEditStart = (key: string, value: string) => {
+    setEditingKey(key);
+    setEditValue(value);
+  };
+
+  const handleEditCancel = () => {
+    setEditingKey(null);
+    setEditValue('');
+  };
+
+  const handleUpdateEnvVar = async () => {
+    if (!editingKey) return;
+
+    try {
+      await api.projects.addEnvVariable(Number(projectId), {
+        key: editingKey,
+        value: editValue,
+        target: 'all'
+      });
+      setEnvVars({ ...envVars, [editingKey]: editValue });
+      setEditingKey(null);
+      setEditValue('');
+      toast({
+        title: 'Environment variable updated',
+        description: `${editingKey} has been updated.`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update environment variable.',
         variant: 'destructive',
       });
     }
@@ -421,30 +458,71 @@ export const Settings = () => {
                           </code>
                         </div>
                         <div className="flex items-center gap-2 mt-1">
-                          <code className="text-sm font-mono text-muted-foreground truncate">
-                            {showValues[key] ? value : '••••••••'}
-                          </code>
+                          {editingKey === key ? (
+                            <div className="relative w-full">
+                              <Input
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                className="h-8 py-1 text-sm font-mono pr-20"
+                                autoFocus
+                              />
+                              <div className="absolute right-1 top-1 flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 text-green-500 hover:text-green-600 hover:bg-green-50"
+                                  onClick={handleUpdateEnvVar}
+                                >
+                                  <Check className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                                  onClick={handleEditCancel}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <code className="text-sm font-mono text-muted-foreground truncate">
+                              {showValues[key] ? value : '••••••••'}
+                            </code>
+                          )}
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => toggleShowValue(key)}
-                      >
-                        {showValues[key] ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteEnvVar(key)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => toggleShowValue(key)}
+                          disabled={editingKey === key}
+                        >
+                          {showValues[key] ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEditStart(key, value)}
+                          disabled={editingKey === key}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteEnvVar(key)}
+                          className="text-destructive hover:text-destructive"
+                          disabled={editingKey === key}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   ))
                 )}
