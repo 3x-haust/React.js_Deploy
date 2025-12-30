@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import {
   Table,
@@ -20,6 +21,8 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { ChevronLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface User {
@@ -32,6 +35,7 @@ interface User {
 }
 
 export default function AdminUsers() {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -83,7 +87,15 @@ export default function AdminUsers() {
 
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center gap-4">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => navigate(-1)}
+          className="rounded-full h-10 w-10"
+        >
+          <ChevronLeft className="h-6 w-6" />
+        </Button>
         <h1 className="text-3xl font-bold tracking-tight">Admin Console</h1>
       </div>
 
