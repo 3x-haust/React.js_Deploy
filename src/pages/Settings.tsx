@@ -180,10 +180,11 @@ export const Settings = () => {
       lines.forEach((line) => {
         if (!inQuote) {
           const trimmedLine = line.trim();
-          if (trimmedLine && !trimmedLine.startsWith('#')) {
-            const [key, ...valueParts] = trimmedLine.split('=');
-            if (key) {
-              const fullValue = valueParts.join('=').trim();
+          if (trimmedLine && !trimmedLine.startsWith('#') && !trimmedLine.startsWith('!')) {
+            const separatorIndex = trimmedLine.indexOf('=') !== -1 ? trimmedLine.indexOf('=') : trimmedLine.indexOf(':');
+            if (separatorIndex !== -1) {
+              const key = trimmedLine.substring(0, separatorIndex).trim();
+              const fullValue = trimmedLine.substring(separatorIndex + 1).trim();
               if ((fullValue.startsWith('"') || fullValue.startsWith("'")) && 
                   !(fullValue.length >= 2 && fullValue.startsWith(fullValue[0]) && fullValue.endsWith(fullValue[0]))) {
                 inQuote = true;
