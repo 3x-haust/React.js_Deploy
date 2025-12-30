@@ -24,7 +24,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Plus, Trash2, Eye, EyeOff, Upload } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 
 interface Repository {
@@ -65,6 +65,8 @@ const FRAMEWORKS = [
   { value: 'nodejs', label: 'Node.js', logo: '/framework-nodejs.svg', install: 'npm install', output: '' },
   { value: 'other', label: 'Other', logo: '', install: '', output: '' },
 ];
+
+const BACKEND_FRAMEWORKS = ['nestjs', 'springboot', 'nodejs'];
 
 export const ProjectSetupDialog = ({
   open,
@@ -114,6 +116,62 @@ export const ProjectSetupDialog = ({
     setShowValues((prev) => ({ ...prev, [index]: !prev[index] }));
   };
 
+  const handleEnvFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      const lines = content.split('\n');
+      const newVars: Array<{ key: string; value: string }> = [];
+      let currentKey = '';
+      let currentValue = '';
+      let inQuote = false;
+      let quoteChar = '';
+
+      lines.forEach((line) => {
+        if (!inQuote) {
+          const trimmedLine = line.trim();
+          if (trimmedLine && !trimmedLine.startsWith('#')) {
+            const [key, ...valueParts] = trimmedLine.split('=');
+            if (key) {
+              const fullValue = valueParts.join('=').trim();
+              if ((fullValue.startsWith('"') || fullValue.startsWith("'")) && 
+                  !(fullValue.length >= 2 && fullValue.startsWith(fullValue[0]) && fullValue.endsWith(fullValue[0]))) {
+                inQuote = true;
+                quoteChar = fullValue[0];
+                currentKey = key.trim();
+                currentValue = fullValue.substring(1);
+              } else {
+                newVars.push({
+                  key: key.trim(),
+                  value: fullValue.replace(/^["']|["']$/g, ''),
+                });
+              }
+            }
+          }
+        } else {
+          if (line.includes(quoteChar)) {
+            const [valPart, ...rest] = line.split(quoteChar);
+            currentValue += '\n' + valPart;
+            newVars.push({ key: currentKey, value: currentValue });
+            inQuote = false;
+          } else {
+            currentValue += '\n' + line;
+          }
+        }
+      });
+
+      if (newVars.length > 0) {
+        const filteredCurrent = envVars.filter(v => v.key || v.value);
+        setEnvVars([...filteredCurrent, ...newVars, { key: '', value: '' }]);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
   const handleConfirm = () => {
     const trimmedProjectName = projectName.trim();
 
@@ -136,8 +194,6 @@ export const ProjectSetupDialog = ({
 
     const isRootDomainOnly = useRootDomainOnly;
     const domain = (isRootDomainOnly ? selectedDomain : `${trimmedProjectName}.${selectedDomain}`).toLowerCase();
-
-
 
     onConfirm({
       framework,
@@ -278,55 +334,78 @@ export const ProjectSetupDialog = ({
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Infrastructure Resources</CardTitle>
-              <CardDescription>
-                Select additional resources for your project.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="db-type">Database</Label>
-                <Select value={dbType} onValueChange={(value: any) => setDbType(value)}>
-                  <SelectTrigger id="db-type">
-                    <SelectValue placeholder="Select database" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    <SelectItem value="postgresql">PostgreSQL</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-3">
-                  <Checkbox
-                    id="use-redis"
-                    checked={useRedis}
-                    onCheckedChange={(checked) => setUseRedis(checked === true)}
-                  />
-                  <Label htmlFor="use-redis" className="cursor-pointer">Enable Redis</Label>
+          {BACKEND_FRAMEWORKS.includes(framework) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Infrastructure Resources</CardTitle>
+                <CardDescription>
+                  Select additional resources for your project.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="db-type">Database</Label>
+                  <Select value={dbType} onValueChange={(value: any) => setDbType(value)}>
+                    <SelectTrigger id="db-type">
+                      <SelectValue placeholder="Select database" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="postgresql">PostgreSQL</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <Checkbox
-                    id="use-elasticsearch"
-                    checked={useElasticsearch}
-                    onCheckedChange={(checked) => setUseElasticsearch(checked === true)}
-                  />
-                  <Label htmlFor="use-elasticsearch" className="cursor-pointer">Enable Elasticsearch</Label>
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      id="use-redis"
+                      checked={useRedis}
+                      onCheckedChange={(checked) => setUseRedis(checked === true)}
+                    />
+                    <Label htmlFor="use-redis" className="cursor-pointer">Enable Redis</Label>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      id="use-elasticsearch"
+                      checked={useElasticsearch}
+                      onCheckedChange={(checked) => setUseElasticsearch(checked === true)}
+                    />
+                    <Label htmlFor="use-elasticsearch" className="cursor-pointer">Enable Elasticsearch</Label>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
-            <CardHeader>
-              <CardTitle>Environment Variables</CardTitle>
-              <CardDescription>
-                Add environment variables for your project
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <div>
+                <CardTitle>Environment Variables</CardTitle>
+                <CardDescription>
+                  Add environment variables for your project.
+                </CardDescription>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById('env-upload')?.click()}
+                  className="gap-2"
+                >
+                  <Upload className="h-4 w-4" />
+                  Import .env
+                </Button>
+                <input
+                  id="env-upload"
+                  type="file"
+                  accept="*"
+                  className="hidden"
+                  onChange={handleEnvFileChange}
+                />
+              </div>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-4 sm:grid-cols-12">

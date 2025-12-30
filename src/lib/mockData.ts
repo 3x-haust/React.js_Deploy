@@ -29,6 +29,10 @@ export interface Project {
   repository: Repository;
   repositoryUrl?: string;
   domain?: string;
+  port?: number;
+  dbType?: 'none' | 'postgresql';
+  useRedis?: boolean;
+  useElasticsearch?: boolean;
   lastDeployment?: Deployment;
   createdAt: string;
 }

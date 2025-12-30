@@ -103,6 +103,9 @@ const Dashboard = () => {
         outputDir: config.outputDir,
         envVariables: config.envVariables,
         domain: config.domain,
+        dbType: config.dbType,
+        useRedis: config.useRedis,
+        useElasticsearch: config.useElasticsearch,
       });
 
       const newProject: Project = {

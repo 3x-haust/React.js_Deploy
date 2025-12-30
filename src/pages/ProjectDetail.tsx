@@ -204,7 +204,7 @@ export const ProjectDetail = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3">        
             <Button variant="outline" size="sm" onClick={handleRedeploy}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Redeploy

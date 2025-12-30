@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Eye, EyeOff, Save } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Eye, EyeOff, Save, Upload } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,8 @@ import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { api } from '@/lib/api';
+
+const BACKEND_FRAMEWORKS = ['nestjs', 'springboot', 'nodejs'];
 
 export const Settings = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -86,8 +88,8 @@ export const Settings = () => {
     }
 
     try {
-      const addedEnvVar = await api.projects.addEnvVariable(Number(projectId), newVar);
-      setEnvVars({ ...envVars, [addedEnvVar.key]: addedEnvVar.value });
+      await api.projects.addEnvVariable(Number(projectId), newVar);
+      setEnvVars({ ...envVars, [newVar.key]: newVar.value });
       setNewVar({ key: '', value: '', target: 'all' });
       toast({
         title: 'Environment variable added',
@@ -122,6 +124,62 @@ export const Settings = () => {
 
   const toggleShowValue = (key: string) => {
     setShowValues((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleEnvFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      const lines = content.split('\n');
+      const newVars: Record<string, string> = {};
+      let currentKey = '';
+      let currentValue = '';
+      let inQuote = false;
+      let quoteChar = '';
+
+      lines.forEach((line) => {
+        if (!inQuote) {
+          const trimmedLine = line.trim();
+          if (trimmedLine && !trimmedLine.startsWith('#')) {
+            const [key, ...valueParts] = trimmedLine.split('=');
+            if (key) {
+              const fullValue = valueParts.join('=').trim();
+              if ((fullValue.startsWith('"') || fullValue.startsWith("'")) && 
+                  !(fullValue.length >= 2 && fullValue.startsWith(fullValue[0]) && fullValue.endsWith(fullValue[0]))) {
+                inQuote = true;
+                quoteChar = fullValue[0];
+                currentKey = key.trim();
+                currentValue = fullValue.substring(1);
+              } else {
+                newVars[key.trim()] = fullValue.replace(/^["']|["']$/g, '');
+              }
+            }
+          }
+        } else {
+          if (line.includes(quoteChar)) {
+            const [valPart, ...rest] = line.split(quoteChar);
+            currentValue += '\n' + valPart;
+            newVars[currentKey] = currentValue;
+            inQuote = false;
+          } else {
+            currentValue += '\n' + line;
+          }
+        }
+      });
+
+      if (Object.keys(newVars).length > 0) {
+        setEnvVars(prev => ({ ...prev, ...newVars }));
+        toast({
+          title: 'Import Successful',
+          description: `Loaded ${Object.keys(newVars).length} environment variables. Re-save to apply changes.`,
+        });
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
   };
 
   const handleSaveSettings = async () => {
@@ -218,56 +276,79 @@ export const Settings = () => {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Infrastructure Resources</CardTitle>
-              <CardDescription>
-                Select additional resources for your project.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="db-type">Database</Label>
-                <Select value={dbType} onValueChange={(value: any) => setDbType(value)}>
-                  <SelectTrigger id="db-type">
-                    <SelectValue placeholder="Select database" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    <SelectItem value="postgresql">PostgreSQL</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-3">
-                  <Checkbox
-                    id="use-redis"
-                    checked={useRedis}
-                    onCheckedChange={(checked) => setUseRedis(checked === true)}
-                  />
-                  <Label htmlFor="use-redis" className="cursor-pointer">Enable Redis</Label>
+          {project && BACKEND_FRAMEWORKS.includes(project.framework) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Infrastructure Resources</CardTitle>
+                <CardDescription>
+                  Select additional resources for your project.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="db-type">Database</Label>
+                  <Select value={dbType} onValueChange={(value: any) => setDbType(value)}>
+                    <SelectTrigger id="db-type">
+                      <SelectValue placeholder="Select database" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="postgresql">PostgreSQL</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <Checkbox
-                    id="use-elasticsearch"
-                    checked={useElasticsearch}
-                    onCheckedChange={(checked) => setUseElasticsearch(checked === true)}
-                  />
-                  <Label htmlFor="use-elasticsearch" className="cursor-pointer">Enable Elasticsearch</Label>
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      id="use-redis"
+                      checked={useRedis}
+                      onCheckedChange={(checked) => setUseRedis(checked === true)}
+                    />
+                    <Label htmlFor="use-redis" className="cursor-pointer">Enable Redis</Label>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      id="use-elasticsearch"
+                      checked={useElasticsearch}
+                      onCheckedChange={(checked) => setUseElasticsearch(checked === true)}
+                    />
+                    <Label htmlFor="use-elasticsearch" className="cursor-pointer">Enable Elasticsearch</Label>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
-            <CardHeader>
-              <CardTitle>Environment Variables</CardTitle>
-              <CardDescription>
-                Manage your project's environment variables for different
-                environments
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <div>
+                <CardTitle>Environment Variables</CardTitle>
+                <CardDescription>
+                  Manage your project's environment variables for different
+                  environments. (Tip: On macOS, press Cmd + Shift + . to see .env files)
+                </CardDescription>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById('env-upload-settings')?.click()}
+                  className="gap-2"
+                >
+                  <Upload className="h-4 w-4" />
+                  Import .env
+                </Button>
+                <input
+                  id="env-upload-settings"
+                  type="file"
+                  accept="*"
+                  className="hidden"
+                  onChange={handleEnvFileChange}
+                />
+              </div>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-4 sm:grid-cols-12">
@@ -284,15 +365,30 @@ export const Settings = () => {
                 </div>
                 <div className="sm:col-span-4 space-y-2">
                   <Label htmlFor="new-value">Value</Label>
-                  <Input
-                    id="new-value"
-                    type="password"
-                    value={newVar.value}
-                    onChange={(e) =>
-                      setNewVar({ ...newVar, value: e.target.value })
-                    }
-                    placeholder="Value"
-                  />
+                  <div className="relative">
+                    <Input
+                      id="new-value"
+                      type={showValues['new'] ? 'text' : 'password'}
+                      value={newVar.value}
+                      onChange={(e) =>
+                        setNewVar({ ...newVar, value: e.target.value })
+                      }
+                      placeholder="Value"
+                      className="pr-10"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-10 w-10 text-muted-foreground hover:text-foreground"
+                      onClick={() => toggleShowValue('new')}
+                    >
+                      {showValues['new'] ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
                 <div className="sm:col-span-1 flex items-end">
                   <Button
